@@ -1,5 +1,9 @@
 # flutter_audio_recorder
 
+
+[![Demo](https://i.imgur.com/iGdxmYm.gif)]
+
+
 A new Flutter project.
 
 ## Getting Started
