@@ -1,7 +1,7 @@
 # flutter_audio_recorder
 
 
-[![Demo](https://i.imgur.com/iGdxmYm.gif)]
+[![Demo](https://media.giphy.com/media/1hMdP9qwXj5uIYIHJa/giphy.gif)]
 
 
 A new Flutter project.
