@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-// import 'dart:io';
+import 'dart:io';
 import 'dart:async';
+import 'package:filesize/filesize.dart';
 import 'dart:convert';
 import 'package:flutter_sound/flutter_sound.dart';
 import '../widgets/model_bottom_sheet.dart';
@@ -23,10 +24,10 @@ class _HomeScreenState extends State<HomeScreen> {
   String _recorderTxt = '00:00:00';
   String _voiceName = '';
   bool _isRecording = false;
-  List<String> voiceNames = ['ahmed', 'ali', 'adham', 'khaled'];
   List<String> voiceNotes = [];
-  // List<Map<String, String>> voiceNotes = [];
-  // Map<String, String> voiceNote;
+  String audioPath;
+  String dirName;
+
   @override
   void initState() {
     super.initState();
@@ -35,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     SharedPreferences.getInstance().then((prefs) {
       setState(() {
-        voiceNotes = prefs.getStringList('voiceNotes');
+        voiceNotes = prefs.getStringList('voiceNotes') ?? [];
       });
     });
   }
@@ -50,7 +51,13 @@ class _HomeScreenState extends State<HomeScreen> {
       String localPath = await _localPath;
       String path =
           await flutterSound.startRecorder('$localPath/$_voiceName.mp4');
+      setState(() {
+        audioPath = path;
+      });
       print('startRecorder: $path');
+      var file = File(path);
+      print('file size ${file.lengthSync()}');
+      print('file size ${filesize(file.lengthSync())}');
       Map<String, String> newVoiceNote = {
         "voiceName": _voiceName,
         "voiceUri": path
@@ -93,6 +100,10 @@ class _HomeScreenState extends State<HomeScreen> {
         _recorderSubscription.cancel();
         _recorderSubscription = null;
       }
+
+      var file = File(audioPath);
+      print('file size from stop ${file.lengthSync()}');
+      print('file size from stop ${filesize(file.lengthSync())}');
 
       setState(() {
         _isRecording = false;
@@ -182,6 +193,65 @@ class _HomeScreenState extends State<HomeScreen> {
         });
   }
 
+  void _createNewDir() {
+    // get folder name
+    
+    // get path
+
+    // create new dir at this path
+
+    // show dir icon on home screen in a gridview
+  }
+
+  void _openAddFolderDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: AlertDialog(
+            title: Center(
+              child: Text(
+                'Create new folder',
+                style: TextStyle(color: Colors.blue),
+              ),
+            ),
+            titlePadding: EdgeInsets.all(10),
+            content: TextField(
+              decoration: InputDecoration(
+                labelText: 'Folder Name',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(7),
+                  borderSide: BorderSide(
+                    style: BorderStyle.solid,
+                    width: 2,
+                  ),
+                ),
+              ),
+              onChanged: (String value) {
+                setState(() {
+                  dirName = value;
+                });
+                print('folder name :$value');
+              },
+            ),
+            contentPadding: EdgeInsets.all(10),
+            actions: <Widget>[
+              FlatButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('CLose'),
+              ),
+              FlatButton(
+                onPressed: () => _createNewDir(),
+                child: Text('Create'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     print('from prefs => $voiceNotes');
@@ -209,9 +279,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openRecordingWidget(context),
-        child: Icon(Icons.keyboard_voice),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          FloatingActionButton(
+            onPressed: () => _openRecordingWidget(context),
+            child: Icon(Icons.keyboard_voice),
+          ),
+          SizedBox(
+            height: 20,
+          ),
+          FloatingActionButton(
+            onPressed: () => _openAddFolderDialog(context),
+            child: Icon(Icons.create_new_folder),
+          )
+        ],
       ),
     );
   }
