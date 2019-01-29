@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import './voices_screen.dart';
 import 'dart:io';
 import 'dart:async';
 import 'package:path/path.dart';
@@ -30,29 +31,14 @@ class _HomeScreenState extends State<HomeScreen> {
   String audioPath;
   String mainPath;
   String dirName;
+  String selectedFolderPath;
+  String selectedFolderName;
   List<Directory> allDirVoices = [];
 
   Future<String> get _localPath async {
     final directory = await getApplicationDocumentsDirectory();
     return directory.path;
   }
-
-  // Future listDir(String folderPath) async {
-  //   var directory = new Directory(folderPath);
-  //   print(directory);
-
-  //   var exists = await directory.exists();
-  //   if (exists) {
-  //     print("exits");
-  //     directory.list().listen((FileSystemEntity entity) {
-  //       if (entity is Directory) {
-  //         allDirVoices.add(entity);
-  //         print(basename(entity.path));
-  //         print(entity.path);
-  //       }
-  //     });
-  //   }
-  // }
 
   Future<List<Directory>> filesInDirectory(Directory dir) async {
     List<Directory> dirs = <Directory>[];
@@ -97,9 +83,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void startRecorder(StateSetter setState) async {
     try {
-      String localPath = await _localPath;
-      String path =
-          await flutterSound.startRecorder('$localPath/$_voiceName.mp4');
+      // String localPath = await _localPath;
+      String path = await flutterSound
+          .startRecorder('$selectedFolderPath/$_voiceName.mp4');
       setState(() {
         audioPath = path;
       });
@@ -136,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void stopRecorder(StateSetter setState) async {
+  void stopRecorder(BuildContext context, StateSetter setState) async {
     try {
       String result = await flutterSound.stopRecorder();
       print('stopRecorder: $result');
@@ -162,28 +148,22 @@ class _HomeScreenState extends State<HomeScreen> {
         print(voiceNotes);
       });
 
-      // Navigator.of(context).pop();
+      Navigator.of(context).pop();
     } catch (err) {
       print('stopRecorder error: $err');
     }
   }
 
-  // Future<List<DropdownMenuItem>> dropDownItems() async {
-  //   List<Directory> dirs =
-  //       await filesInDirectory(Directory('$mainPath/voices'));
-  //   List<DropdownMenuItem> items = dirs
-  //       .map(
-  //         (dir) => DropdownMenuItem(
-  //               child: Text(
-  //                 basename(dir.path),
-  //               ),
-  //             ),
-  //       )
-  //       .toList();
-  //   return items;
-  // }
+  void _selectDirPath(BuildContext context, int index, StateSetter setState) {
+    print('selected folder ${allDirVoices[index].path}');
+    setState(() {
+      selectedFolderPath = allDirVoices[index].path;
+      selectedFolderName = basename(allDirVoices[index].path);
+    });
+    Navigator.of(context).pop();
+  }
 
-  void _selectFolderDialog(BuildContext context) {
+  void _selectFolderDialog(BuildContext context, StateSetter setState) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -204,9 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               itemBuilder: (BuildContext context, int index) {
                 return InkWell(
-                  onTap: () {
-                    print('selected folder ${allDirVoices[index].path}');
-                  },
+                  onTap: () => _selectDirPath(context, index, setState),
                   child: Center(
                     child: Text(
                       basename(allDirVoices[index].path),
@@ -262,42 +240,51 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(
                       height: 20,
                     ),
-                    Center(
-                      child: Row(
-                        children: <Widget>[
-                          SizedBox(
-                            width: 10,
-                          ),
-                          FlatButton(
-                            onPressed: () => _selectFolderDialog(context),
+                    selectedFolderPath != null
+                        ? Center(
                             child: Text(
-                              'SELECT FOLDER',
-                              style: TextStyle(color: Colors.blue),
+                              'Saved in [ $selectedFolderName ] folder',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          )
+                        : Center(
+                            child: Row(
+                              children: <Widget>[
+                                SizedBox(
+                                  width: 10,
+                                ),
+                                FlatButton(
+                                  onPressed: () =>
+                                      _selectFolderDialog(context, setState),
+                                  child: Text(
+                                    'SELECT FOLDER',
+                                    style: TextStyle(color: Colors.blue),
+                                  ),
+                                ),
+                                Text(
+                                  'OR',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange),
+                                ),
+                                FlatButton(
+                                  onPressed: () =>
+                                      _openAddFolderDialog(context),
+                                  child: Text(
+                                    'ADD NEW FOLDER',
+                                    style: TextStyle(color: Colors.blue),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          Text(
-                            'OR',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.orange),
-                          ),
-                          FlatButton(
-                            onPressed: () => _openAddFolderDialog(context),
-                            child: Text(
-                              'ADD NEW FOLDER',
-                              style: TextStyle(color: Colors.blue),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                     SizedBox(
                       height: 20,
                     ),
                     _isRecording == true
                         ? IconButton(
                             onPressed: () {
-                              stopRecorder(setState);
+                              stopRecorder(context, setState);
                             },
                             icon: ImageIcon(
                               AssetImage('assets/images/ic_stop.png'),
@@ -417,6 +404,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   return InkWell(
                     onTap: () {
                       // go to new page and list voice files in it
+                      Navigator.of(context)
+                          .push(PageRouteBuilder(pageBuilder: (_, __, ___) {
+                        return VoicesScreen(allDirVoices[index].path);
+                      }));
                     },
                     child: DirButton(basename(allDirVoices[index].path)),
                   );
@@ -428,6 +419,7 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           FloatingActionButton(
+            heroTag: 'btn1',
             onPressed: () => _openRecordingWidget(context),
             child: Icon(Icons.keyboard_voice),
           ),
@@ -435,6 +427,7 @@ class _HomeScreenState extends State<HomeScreen> {
             height: 20,
           ),
           FloatingActionButton(
+            heroTag: 'btn2',
             onPressed: () => _openAddFolderDialog(context),
             child: Icon(Icons.create_new_folder),
           )
