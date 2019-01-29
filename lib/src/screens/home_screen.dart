@@ -4,11 +4,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'dart:async';
+import 'package:path/path.dart';
 import 'package:filesize/filesize.dart';
 import 'dart:convert';
+import '../widgets/dir_widget.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import '../widgets/model_bottom_sheet.dart';
-import '../widgets/voice_note_widget.dart';
+// import '../widgets/voice_note_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -26,7 +28,44 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isRecording = false;
   List<String> voiceNotes = [];
   String audioPath;
+  String mainPath;
   String dirName;
+  List<Directory> allDirVoices = [];
+
+  Future<String> get _localPath async {
+    final directory = await getApplicationDocumentsDirectory();
+    return directory.path;
+  }
+
+  // Future listDir(String folderPath) async {
+  //   var directory = new Directory(folderPath);
+  //   print(directory);
+
+  //   var exists = await directory.exists();
+  //   if (exists) {
+  //     print("exits");
+  //     directory.list().listen((FileSystemEntity entity) {
+  //       if (entity is Directory) {
+  //         allDirVoices.add(entity);
+  //         print(basename(entity.path));
+  //         print(entity.path);
+  //       }
+  //     });
+  //   }
+  // }
+
+  Future<List<Directory>> filesInDirectory(Directory dir) async {
+    List<Directory> dirs = <Directory>[];
+    await for (FileSystemEntity entity
+        in dir.list(recursive: false, followLinks: false)) {
+      FileSystemEntityType type = await FileSystemEntity.type(entity.path);
+      if (type == FileSystemEntityType.directory) {
+        dirs.add(entity);
+        print(entity.path);
+      }
+    }
+    return dirs;
+  }
 
   @override
   void initState() {
@@ -34,16 +73,26 @@ class _HomeScreenState extends State<HomeScreen> {
     flutterSound = new FlutterSound();
     flutterSound.setSubscriptionDuration(0.01);
 
+    _localPath.then((path) {
+      setState(() {
+        mainPath = path;
+      });
+    });
+
+    filesInDirectory(Directory(
+            '/data/data/com.example.flutteraudiorecorder/app_flutter/voices/'))
+        .then((dirs) {
+      print(dirs);
+      setState(() {
+        allDirVoices = dirs;
+      });
+    });
+
     SharedPreferences.getInstance().then((prefs) {
       setState(() {
         voiceNotes = prefs.getStringList('voiceNotes') ?? [];
       });
     });
-  }
-
-  Future<String> get _localPath async {
-    final directory = await getApplicationDocumentsDirectory();
-    return directory.path;
   }
 
   void startRecorder(StateSetter setState) async {
@@ -63,10 +112,6 @@ class _HomeScreenState extends State<HomeScreen> {
         "voiceUri": path
       };
       voiceNotes.add(json.encode(newVoiceNote));
-
-      // setState(() {
-      //   voiceNote = newVoiceNote;
-      // });
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
       prefs.setStringList('voiceNotes', voiceNotes);
@@ -117,13 +162,74 @@ class _HomeScreenState extends State<HomeScreen> {
         print(voiceNotes);
       });
 
-      Navigator.of(context).pop();
+      // Navigator.of(context).pop();
     } catch (err) {
       print('stopRecorder error: $err');
     }
   }
 
-  void _openRecordingWidget(context) {
+  // Future<List<DropdownMenuItem>> dropDownItems() async {
+  //   List<Directory> dirs =
+  //       await filesInDirectory(Directory('$mainPath/voices'));
+  //   List<DropdownMenuItem> items = dirs
+  //       .map(
+  //         (dir) => DropdownMenuItem(
+  //               child: Text(
+  //                 basename(dir.path),
+  //               ),
+  //             ),
+  //       )
+  //       .toList();
+  //   return items;
+  // }
+
+  void _selectFolderDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: AlertDialog(
+            title: Center(
+              child: Text(
+                'Select Folder',
+                style: TextStyle(color: Colors.blue),
+              ),
+            ),
+            titlePadding: EdgeInsets.all(10),
+            content: ListView.separated(
+              itemCount: allDirVoices.length,
+              separatorBuilder: (BuildContext context, int index) {
+                return Divider();
+              },
+              itemBuilder: (BuildContext context, int index) {
+                return InkWell(
+                  onTap: () {
+                    print('selected folder ${allDirVoices[index].path}');
+                  },
+                  child: Center(
+                    child: Text(
+                      basename(allDirVoices[index].path),
+                      style: TextStyle(color: Colors.blue),
+                    ),
+                  ),
+                );
+              },
+            ),
+            contentPadding: EdgeInsets.all(10),
+            actions: <Widget>[
+              FlatButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('CLose'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _openRecordingWidget(context) async {
     showModalBottomSheetApp(
         context: context,
         builder: (BuildContext context) {
@@ -151,6 +257,38 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: 2,
                           ),
                         ),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 20,
+                    ),
+                    Center(
+                      child: Row(
+                        children: <Widget>[
+                          SizedBox(
+                            width: 10,
+                          ),
+                          FlatButton(
+                            onPressed: () => _selectFolderDialog(context),
+                            child: Text(
+                              'SELECT FOLDER',
+                              style: TextStyle(color: Colors.blue),
+                            ),
+                          ),
+                          Text(
+                            'OR',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange),
+                          ),
+                          FlatButton(
+                            onPressed: () => _openAddFolderDialog(context),
+                            child: Text(
+                              'ADD NEW FOLDER',
+                              style: TextStyle(color: Colors.blue),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     SizedBox(
@@ -193,14 +331,17 @@ class _HomeScreenState extends State<HomeScreen> {
         });
   }
 
-  void _createNewDir() {
-    // get folder name
-    
-    // get path
-
+  void _createNewDir(BuildContext context) async {
     // create new dir at this path
+    print('main path $mainPath');
+    Directory dir = await Directory('$mainPath/voices/$dirName').create();
+    this.setState(() {
+      allDirVoices.add(dir);
+    });
 
-    // show dir icon on home screen in a gridview
+    Navigator.of(context).pop();
+    print('from create $allDirVoices');
+    print('new dir $dir');
   }
 
   void _openAddFolderDialog(BuildContext context) {
@@ -242,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Text('CLose'),
               ),
               FlatButton(
-                onPressed: () => _createNewDir(),
+                onPressed: () => _createNewDir(context),
                 child: Text('Create'),
               ),
             ],
@@ -254,12 +395,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print('from prefs => $voiceNotes');
+    print('all dirs $allDirVoices');
     return Scaffold(
       appBar: AppBar(
         title: Text('Audio Recorder'),
       ),
-      body: voiceNotes.length == 0
+      body: allDirVoices.length == 0
           ? Center(
               child: Text('No Voices Found'),
             )
@@ -267,15 +408,18 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: EdgeInsets.all(10),
               width: double.infinity,
               height: MediaQuery.of(context).size.height,
-              child: ListView.separated(
-                itemCount: voiceNotes.length,
-                separatorBuilder: (BuildContext context, int index) =>
-                    Divider(),
+              child: GridView.builder(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                ),
+                itemCount: allDirVoices.length,
                 itemBuilder: (BuildContext context, int index) {
-                  // return VoiceNote(voiceNotes[index]['voiceName'],
-                  //     voiceNotes[index]['voiceUri']);
-                  return VoiceNote(jsonDecode(voiceNotes[index])['voiceName'],
-                      jsonDecode(voiceNotes[index])['voiceUri']);
+                  return InkWell(
+                    onTap: () {
+                      // go to new page and list voice files in it
+                    },
+                    child: DirButton(basename(allDirVoices[index].path)),
+                  );
                 },
               ),
             ),

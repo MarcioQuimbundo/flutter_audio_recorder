@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import './screens/home_screen.dart';
+import 'dart:io';
 // import '../src/widgets/dir_widget.dart';
 
 class MyApp extends StatefulWidget {
@@ -24,9 +25,6 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: HomeScreen(),
-      // home: Scaffold(
-      //   body: Center(child: DirButton('dirName')),
-      // ),
     );
   }
 }
