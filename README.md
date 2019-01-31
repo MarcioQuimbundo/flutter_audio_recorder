@@ -1,5 +1,7 @@
 # flutter_audio_recorder
 
+[![Watch the video](https://i.imgur.com/vKb2F1B.png)](https://www.youtube.com/watch?v=vHy06x5v3BM&feature=youtu.be)
+
 
 [![Demo](https://media.giphy.com/media/1hMdP9qwXj5uIYIHJa/giphy.gif)]
 
